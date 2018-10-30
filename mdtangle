@@ -1,0 +1,27 @@
+#! /usr/bin/env sh
+
+
+#CODE     = $(shell grep '^~~~~*{.*file=.*}$$' agentes.mdweb | sed 's/~~~~*{.*file="\(.*\)".*}/\1/' | uniq )
+
+dependecies=0
+
+while [ "$1" != "" ]; do
+    case $1 in
+	-R )         shift
+		     filename=`echo "$1" | sed -e 's/\./\\\./g' -e 's|\/|\\\/|g'`
+		     shift
+		     ;;
+	-M )         shift
+		     dependencies=1
+		     ;;
+	*)           break
+    esac
+done
+
+
+if [ "$dependencies" = "1" ] ; then
+   grep '^<<.*>>= *$' $* | sed 's/<<\(.*\)>>=/\1/' | uniq
+   exit 0
+fi
+
+sed -n "/^<<$filename>>= *$/,/^@/p" $* | grep -v "^<<.*>>= *$" | grep -v "^@"
