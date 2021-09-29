@@ -1,13 +1,14 @@
 #! /usr/bin/env sh
 
+pandoc=""
+
 while [ "$1" != "" ]; do
     case $1 in
-	-R )         shift
-		     filename=`echo "$1" | sed -e 's/\./\\\./g' -e 's|\/|\\\/|g'`
-		     shift
+	-P )         shift
+		     pandoc="{.\2 name=\1.\2 caption=\1.\2 numbers=left frame=leftline}"
 		     ;;
 	*)           break
     esac
 done
 		     
-sed -e 's/^<<\(.*\)\.\(.*\)>>= *$/~~~{.\2 name=\1.\2 caption=\1.\2 numbers=left frame=leftline}/' -e 's/^@/~~~/' $*
+sed -e "s/^<<\(.*\)\.\(.*\)>>= *$/~~~$pandoc/" -e 's/^@/~~~/' $*
