@@ -1,0 +1,91 @@
+#! /usr/bin/env bash
+
+die() {
+	printf '%s\n' "$1" >&2
+	exit 1
+}
+
+standalone="--standalone"
+acronyms=""
+chapter=""
+headers=""
+
+pandoc_flags=" --filter pandoc-crossref"
+
+yaml_headers="---\n"
+noweb_includes="header-includes:\n"
+noweb_includes+="  - \\\usepackage{noweb}\n"
+noweb_includes+="  - \\pagestyle{noweb}\n"
+noweb_includes+="  - \\\noweboptions{}\n"
+
+while :; do
+	case $1 in
+		-acro=?*)
+			acronyms=${1#*=}
+			pandoc_flags+=" --filter pandoc-acro"
+			;;
+		-acro=)
+			die 'ERROR: "-acro" requires a non-empty option argument.'
+			;;
+		-bib=?*)
+			yaml_headers+="bibliography: ${1#*=}\n"
+			pandoc_flags+=" --citeproc" 
+			;;
+		-bib=)
+			die 'ERROR: "-bib" requires a non-empty option argument.'
+			;;
+		-chapter)
+			pandoc_flags+=" --top-level-division=chapter"
+			;;
+		-chapter=?*)
+			chapter="\\setcounter{chapter}{$((${1#*=} -1))}"
+			pandoc_flags+=" --top-level-division=chapter"
+			;;
+		-delay)
+			standalone=""
+			;;
+		-headers=?*)
+			headers="${1#*=}"
+			noweb_includes=""
+			;;
+		-headers=)
+			die 'ERROR:"-header" requires a non-empty option argument.'
+			;;
+		-listings)
+			pandoc_flags+=" --listings -Mlistings"
+			;;
+		--)
+			shift
+			break
+			;;
+		-?*)
+			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+			;;
+		*)
+			break
+	esac
+	shift
+done
+
+pandoc_flags+=" $standalone"
+
+yaml_headers+="$noweb_includes"
+yaml_headers+='...\n'
+yaml_headers+="$chapter\n"
+
+
+echo -e $yaml_headers | cat - $headers $acronyms $1 \
+	| perl -pe 's/\[\[(.*?\[.*?\])\]\]/+++$1+++/g' \
+	| perl -pe 's/\[\[(.*?)\]\]/+++$1+++/g' \
+	| perl -pe 's/^(<<.*?>>=)/~~~\n$1/g' \
+	| perl -pe 's/^(\@.*$)/$1\n~~~/g' \
+	| pandoc  -f markdown -t latex $pandoc_flags \
+		$standalone $pandoc_division $citeproc \
+	| perl -pe 's/\{\[\}(.*?)\{\]\}/[$1]/g' \
+	| perl -pe 's/\+\+\+(.*?)\+\+\+/[[$1]]/g' \
+	| perl -ne 'my $state = 0; foreach $char (split //,$_) { $state++ if $char =~ m/\[/ ; $state-- if $char =~ m/\]/ ; next if ($char =~ m/\\/ && $state >= 2); print $char; }' \
+	| perl -0777 -pe 's/\\begin{verbatim}\n(<<.*?>>=)/$1/g' \
+	| perl -0777 -pe 's/(\@.*?)\n\\end{verbatim}/$1/g' \
+	| perl -0777 -pe 's/\\begin{lstlisting}\n(<<.*?>>=)/$1/g' \
+	| perl -0777 -pe 's/(\@.*?)\n\\end{lstlisting}/$1/g'
+
