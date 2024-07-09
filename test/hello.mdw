@@ -7,6 +7,13 @@ Hello world is one of the best examples of a C program.
 
 main() 
 {
-    printf("Hello, world!\n");
+	<<Print message>>
 }
 @
+
+The message is printed by the function [[printf]].
+
+<<Print message>>=
+printf("Hello, world!\n");
+@
+

@@ -1,10 +1,20 @@
-all: hello.c hello.md
+.POSIX:
 
-hello.c: hello.mdw
-	sh ../src/mdtangle -R $@ $< > $@
+TARGET = hello
 
-hello.md: hello.mdw
-	sh ../src/mdweave $< > $@
+all: $(TARGET).c $(TARGET).pdf
+
+.SUFFIXES: .c .mdw .pdf .tex
+
+.mdw.c:
+	notangle -R$@ $< > $@
+
+.mdw.tex:
+	../src/mdw2nw $< | noweave -delay > $@
+
+.tex.pdf:
+	latexmk -xelatex -pdf $<
+	latexmk -c $<
 
 clean:
-	rm -f hello.c hello.md
+	rm -f $(TARGET).c $(TARGET).md

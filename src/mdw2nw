@@ -74,18 +74,14 @@ yaml_headers+='...\n'
 yaml_headers+="$chapter\n"
 
 
-echo -e $yaml_headers | cat - $headers $acronyms $1 \
-	| perl -pe 's/\[\[(.*?\[.*?\])\]\]/+++$1+++/g' \
-	| perl -pe 's/\[\[(.*?)\]\]/+++$1+++/g' \
-	| perl -pe 's/^(<<.*?>>=)/~~~\n$1/g' \
-	| perl -pe 's/^(\@.*$)/$1\n~~~/g' \
-	| pandoc  -f markdown -t latex $pandoc_flags \
-		$standalone $pandoc_division $citeproc \
-	| perl -pe 's/\{\[\}(.*?)\{\]\}/[$1]/g' \
-	| perl -pe 's/\+\+\+(.*?)\+\+\+/[[$1]]/g' \
-	| perl -ne 'my $state = 0; foreach $char (split //,$_) { $state++ if $char =~ m/\[/ ; $state-- if $char =~ m/\]/ ; next if ($char =~ m/\\/ && $state >= 2); print $char; }' \
+echo -e $yaml_headers | cat - $headers $acronyms $1	\
+	| sed 's/\[\[\(\[*\)/$[[\1/g
+	       s/\(\]*\)\]\]/\1]]$/g
+	       /^<<.*>>=/,/^@/s/^/    /'		\
+	| pandoc  -f markdown -t latex $pandoc_flags	\
+		$standalone $pandoc_division $citeproc	\
+	| sed 's/\\(\[\[/[[/g
+	       s/\]\]\\)/]]/g'				\
 	| perl -0777 -pe 's/\\begin{verbatim}\n(<<.*?>>=)/$1/g' \
-	| perl -0777 -pe 's/(\@.*?)\n\\end{verbatim}/$1/g' \
-	| perl -0777 -pe 's/\\begin{lstlisting}\n(<<.*?>>=)/$1/g' \
-	| perl -0777 -pe 's/(\@.*?)\n\\end{lstlisting}/$1/g'
+	| perl -0777 -pe 's/(\@.*?)\n\\end{verbatim}/$1/g' 
 
